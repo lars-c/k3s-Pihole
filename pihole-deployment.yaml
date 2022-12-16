@@ -1,0 +1,65 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pihole
+  namespace: pihole
+  labels:
+    app: pihole
+spec:
+  selector:
+    matchLabels:
+      app: pihole
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: pihole
+    spec:
+      containers:
+      - image: pihole/pihole:latest
+        name: pihole
+        env:
+        - name: WEBPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: webui-password
+              key: password
+        - name: TZ
+          valueFrom:
+            configMapKeyRef:
+              name: pihole
+              key: TZ
+        - name: FTLCONF_REPLY_ADDR4
+          valueFrom:
+            configMapKeyRef:
+              name: pihole
+              key: FTLCONF_REPLY_ADDR4
+        - name: PIHOLE_DNS
+          valueFrom:
+            configMapKeyRef:
+              name: pihole
+              key: PIHOLE_DNS
+        ports:
+        - name: web
+          containerPort: 80
+          protocol: TCP
+        - name: dns-tcp
+          containerPort: 53
+          protocol: TCP
+        - name: dns-udp
+          containerPort: 53
+          protocol: UDP
+        volumeMounts:
+          - name: pihole-pihole-storage
+            mountPath: /etc/pihole
+          - name: pihole-dnsmasq-storage
+            mountPath: /etc/dnsmasq.d
+      volumes:
+      - name: pihole-pihole-storage
+        persistentVolumeClaim:
+          claimName: pihole-pv-claim
+      - name: pihole-dnsmasq-storage
+        persistentVolumeClaim:
+          claimName: dnsmasq-pv-claim
